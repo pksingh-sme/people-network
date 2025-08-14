@@ -292,7 +292,12 @@ export default function FamilyFriendsNetwork() {
             <h4>{memberDetails.name}</h4>
             <p><strong>Group:</strong> {memberDetails.group}</p>
             <p><strong>Age:</strong> {memberDetails.age}</p>
-            <p><strong>DOB:</strong> {memberDetails.dob}</p>
+            <p><strong>DOB:</strong> {" "}
+              {new Date(memberDetails.dob).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}</p>
             <p><strong>Phone:</strong> {memberDetails.phone}</p>
             <p><strong>Email:</strong> {memberDetails.email}</p>
             <p><strong>Profession:</strong> {memberDetails.profession}</p>
