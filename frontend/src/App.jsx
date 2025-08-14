@@ -6,16 +6,17 @@ import "vis-network/styles/vis-network.css";
 
 export default function FamilyFriendsNetwork() {
   const [people, setPeople] = useState([
-    { id: 1, name: "Alice", group: "family" },
-    { id: 2, name: "Bob", group: "friend" },
+    { id: 1, name: "Pramod", group: "family" },
+    { id: 2, name: "Harendra", group: "friend" },
   ]);
-  const [relations, setRelations] = useState([{ from: 1, to: 2, label: "Sister" }]);
+  const [relations, setRelations] = useState([{ from: 1, to: 2, label: "Friend" }]);
   const [newName, setNewName] = useState("");
   const [newGroup, setNewGroup] = useState("family");
   const [relFrom, setRelFrom] = useState("");
   const [relTo, setRelTo] = useState("");
   const [relLabel, setRelLabel] = useState("");
   const [hoverCanvas, setHoverCanvas] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState(null);
 
   const networkRef = useRef(null);
   const containerRef = useRef(null);
@@ -66,15 +67,27 @@ export default function FamilyFriendsNetwork() {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Filter nodes and edges if a member is selected
+    const filteredNodes = selectedMemberId
+      ? people.filter(p => {
+          return p.id === selectedMemberId || 
+                 relations.some(r => (r.from === selectedMemberId && r.to === p.id) || (r.to === selectedMemberId && r.from === p.id));
+        })
+      : people;
+
+    const filteredEdges = selectedMemberId
+      ? relations.filter(r => r.from === selectedMemberId || r.to === selectedMemberId)
+      : relations;
+
     const nodes = new DataSet(
-      people.map((p) => ({
+      filteredNodes.map((p) => ({
         id: p.id,
         label: p.name,
         color: groupColors[p.group] || "#ccc",
       }))
     );
 
-    const edges = new DataSet(relations);
+    const edges = new DataSet(filteredEdges);
 
     const network = new Network(containerRef.current, { nodes, edges }, {
       edges: { arrows: "to" },
@@ -83,7 +96,7 @@ export default function FamilyFriendsNetwork() {
     });
 
     networkRef.current = network;
-  }, [people, relations]);
+  }, [people, relations, selectedMemberId]);
 
   const addMember = () => {
     if (!newName.trim()) return;
@@ -95,6 +108,7 @@ export default function FamilyFriendsNetwork() {
   const deleteMember = (id) => {
     setPeople(people.filter((p) => p.id !== id));
     setRelations(relations.filter((r) => r.from !== id && r.to !== id));
+    if (selectedMemberId === id) setSelectedMemberId(null);
   };
 
   const editMember = (id, name, group) => {
@@ -159,14 +173,15 @@ export default function FamilyFriendsNetwork() {
 
         {/* Members */}
         <div style={cardStyle}>
-          <h4>📋Members</h4>
+          <h4>📋 Members</h4>
           {people.map((p) => (
             <div key={p.id} style={memberCardStyle}>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <div style={{ width: "12px", height: "12px", backgroundColor: groupColors[p.group] || "#ccc", borderRadius: "50%", marginRight: "8px" }}></div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <div style={{ width: "12px", height: "12px", backgroundColor: groupColors[p.group] || "#ccc", borderRadius: "50%" }}></div>
                 <span>{p.name}</span>
               </div>
               <div style={{ display: "flex", gap: "6px" }}>
+                <button onClick={() => setSelectedMemberId(p.id)} style={{ ...buttonStyle, background: "#FF9800", color: "#fff", padding: "4px 8px" }}>Show</button>
                 <button onClick={() => {
                   const name = prompt("Enter new name:", p.name);
                   const group = prompt("Enter group:", p.group);
@@ -176,7 +191,10 @@ export default function FamilyFriendsNetwork() {
               </div>
             </div>
           ))}
-        </div>        
+          {selectedMemberId && (
+            <button onClick={() => setSelectedMemberId(null)} style={{ ...buttonStyle, background: "#2196F3", color: "#fff" }}>Reset Network</button>
+          )}
+        </div>
       </div>
 
       {/* NETWORK */}
