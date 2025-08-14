@@ -1,5 +1,6 @@
 # People Network Application
 
+<img src="./Screenshot.jpg" alt="App Screenshot" style="height:400px;" />
 This repository contains a full-stack application for visualizing and managing a network of people. The project is divided into two main parts:
 
 - **backend/**: Node.js server with a SQLite database for storing people and their relationships.
