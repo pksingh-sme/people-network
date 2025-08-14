@@ -10,6 +10,7 @@ This repository contains a full-stack application for visualizing and managing a
 - Add, edit, and remove people and relationships
 - Export the network graph as an image or PDF
 - Persistent data storage using SQLite
+![App Screenshot](./screenshot.png)
 
 ## Project Structure
 ```
