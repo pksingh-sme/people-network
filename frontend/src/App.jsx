@@ -1,88 +1,77 @@
 import React, { useEffect, useRef, useState } from "react";
 import { DataSet, Network } from "vis-network/standalone";
-import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
-export default function App() {
+export default function FamilyFriendsNetwork() {
   const [people, setPeople] = useState([
-    { id: 1, name: "Alice", group: "Family" },
-    { id: 2, name: "Bob", group: "Friend" }
+    { id: 1, name: "Alice", group: "family" },
+    { id: 2, name: "Bob", group: "friend" },
   ]);
-  const [relations, setRelations] = useState([
-    { from: 1, to: 2, label: "Friend" }
-  ]);
-  const [newName, setNewName] = useState("");
-  const [newGroup, setNewGroup] = useState("Family");
-  const [relationFrom, setRelationFrom] = useState("");
-  const [relationTo, setRelationTo] = useState("");
-  const [relationLabel, setRelationLabel] = useState("");
-
+  const [relations, setRelations] = useState([]);
+  const [newPerson, setNewPerson] = useState({ name: "", group: "family" });
+  const [relationForm, setRelationForm] = useState({ from: "", to: "", label: "" });
   const networkRef = useRef(null);
   const containerRef = useRef(null);
 
   const groupColors = {
-    Family: "#ff9999",
-    Friend: "#99ccff",
-    Work: "#90ee90"
+    family: "#ff9999",
+    friend: "#99ccff",
+    work: "#99ff99",
+    other: "#cccccc",
   };
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     const nodes = new DataSet(
-      people.map(p => ({
+      people.map((p) => ({
         id: p.id,
         label: p.name,
-        color: groupColors[p.group] || "#ccc"
+        color: groupColors[p.group] || "#ccc",
       }))
     );
 
     const edges = new DataSet(relations);
 
-    const network = new Network(containerRef.current, { nodes, edges }, {
-      edges: { arrows: "to", font: { align: "middle" } },
-      interaction: { hover: true },
-      physics: { enabled: true }
-    });
+    const network = new Network(
+      containerRef.current,
+      { nodes, edges },
+      {
+        edges: { arrows: "to", font: { align: "middle" } },
+        interaction: { hover: true },
+        physics: { enabled: true },
+      }
+    );
 
     networkRef.current = network;
   }, [people, relations]);
 
   const addPerson = () => {
-    if (!newName.trim()) return;
-    setPeople(prev => [
-      ...prev,
-      { id: Date.now(), name: newName, group: newGroup }
-    ]);
-    setNewName("");
+    if (!newPerson.name) return;
+    setPeople([...people, { id: Date.now(), ...newPerson }]);
+    setNewPerson({ name: "", group: "family" });
   };
 
   const deletePerson = (id) => {
-    setPeople(prev => prev.filter(p => p.id !== id));
-    setRelations(prev => prev.filter(r => r.from !== id && r.to !== id));
+    setPeople(people.filter((p) => p.id !== id));
+    setRelations(relations.filter((r) => r.from !== id && r.to !== id));
   };
 
-  const editPerson = (id) => {
-    const newName = prompt("Enter new name:");
-    if (newName) {
-      setPeople(prev =>
-        prev.map(p => (p.id === id ? { ...p, name: newName } : p))
-      );
-    }
+  const updatePerson = (id, updatedData) => {
+    setPeople(people.map((p) => (p.id === id ? { ...p, ...updatedData } : p)));
   };
 
   const addRelation = () => {
-    if (!relationFrom || !relationTo || !relationLabel) return;
-    setRelations(prev => [
-      ...prev,
-      { from: parseInt(relationFrom), to: parseInt(relationTo), label: relationLabel }
+    if (!relationForm.from || !relationForm.to || !relationForm.label) return;
+    setRelations([
+      ...relations,
+      { from: parseInt(relationForm.from), to: parseInt(relationForm.to), label: relationForm.label },
     ]);
-    setRelationFrom("");
-    setRelationTo("");
-    setRelationLabel("");
+    setRelationForm({ from: "", to: "", label: "" });
   };
 
-  const downloadImage = async () => {
+  const downloadAsImage = async () => {
     const canvas = await html2canvas(containerRef.current);
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/png");
@@ -90,96 +79,108 @@ export default function App() {
     link.click();
   };
 
-  const downloadPDF = async () => {
+  const downloadAsPDF = async () => {
     const canvas = await html2canvas(containerRef.current);
     const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("landscape");
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    const pdf = new jsPDF({ orientation: "landscape" });
+    pdf.addImage(imgData, "PNG", 10, 10, 280, 190);
     pdf.save("network.pdf");
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Family & Friends Network</h2>
+    <div style={{ display: "flex", gap: "20px" }}>
+      {/* Left Panel */}
+      <div style={{ width: "300px" }}>
+        <h2>Members</h2>
+        <div>
+          <input
+            placeholder="Name"
+            value={newPerson.name}
+            onChange={(e) => setNewPerson({ ...newPerson, name: e.target.value })}
+          />
+          <select
+            value={newPerson.group}
+            onChange={(e) => setNewPerson({ ...newPerson, group: e.target.value })}
+          >
+            <option value="family">Family</option>
+            <option value="friend">Friend</option>
+            <option value="work">Work</option>
+            <option value="other">Other</option>
+          </select>
+          <button onClick={addPerson}>Add</button>
+        </div>
 
-      {/* Add Member */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
-        <input
-          value={newName}
-          onChange={e => setNewName(e.target.value)}
-          placeholder="Enter name"
-        />
-        <select value={newGroup} onChange={e => setNewGroup(e.target.value)}>
-          <option>Family</option>
-          <option>Friend</option>
-          <option>Work</option>
-        </select>
-        <button onClick={addPerson}>Add</button>
-      </div>
-
-      {/* Add Relation */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
-        <select value={relationFrom} onChange={e => setRelationFrom(e.target.value)}>
-          <option value="">From</option>
-          {people.map(p => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-        <select value={relationTo} onChange={e => setRelationTo(e.target.value)}>
-          <option value="">To</option>
-          {people.map(p => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-        <input
-          value={relationLabel}
-          onChange={e => setRelationLabel(e.target.value)}
-          placeholder="Relation label"
-        />
-        <button onClick={addRelation}>Add Relation</button>
-      </div>
-
-      {/* Member List */}
-      <div>
-        <h3>Members</h3>
-        <ul style={{ listStyle: "none", padding: 0 }}>
-          {people.map(p => (
-            <li key={p.id} style={{
-              background: groupColors[p.group] || "#ccc",
-              padding: "6px",
-              marginBottom: "4px",
-              borderRadius: "5px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center"
-            }}>
-              <span>{p.name} ({p.group})</span>
-              <div>
-                <select onChange={(e) => {
-                  if (e.target.value === "edit") editPerson(p.id);
-                  if (e.target.value === "delete") deletePerson(p.id);
+        <ul style={{ padding: 0, listStyle: "none" }}>
+          {people.map((p) => (
+            <li
+              key={p.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                padding: "5px",
+                borderBottom: "1px solid #ddd",
+              }}
+            >
+              <span style={{ background: groupColors[p.group], padding: "3px 6px", borderRadius: "4px" }}>
+                {p.name}
+              </span>
+              <select
+                onChange={(e) => {
+                  if (e.target.value === "edit") {
+                    const newName = prompt("Enter new name:", p.name);
+                    if (newName) updatePerson(p.id, { name: newName });
+                  } else if (e.target.value === "delete") {
+                    deletePerson(p.id);
+                  }
                   e.target.value = "";
-                }}>
-                  <option value="">Actions</option>
-                  <option value="edit">Edit</option>
-                  <option value="delete">Delete</option>
-                </select>
-              </div>
+                }}
+              >
+                <option value="">⋮</option>
+                <option value="edit">Edit</option>
+                <option value="delete">Delete</option>
+              </select>
             </li>
           ))}
         </ul>
+
+        <h3>Add Relationship</h3>
+        <select
+          value={relationForm.from}
+          onChange={(e) => setRelationForm({ ...relationForm, from: e.target.value })}
+        >
+          <option value="">From</option>
+          {people.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={relationForm.to}
+          onChange={(e) => setRelationForm({ ...relationForm, to: e.target.value })}
+        >
+          <option value="">To</option>
+          {people.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+        <input
+          placeholder="Relation"
+          value={relationForm.label}
+          onChange={(e) => setRelationForm({ ...relationForm, label: e.target.value })}
+        />
+        <button onClick={addRelation}>Add</button>
+
+        <h3>Export</h3>
+        <button onClick={downloadAsImage}>Download PNG</button>
+        <button onClick={downloadAsPDF}>Download PDF</button>
       </div>
 
-      {/* Graph */}
-      <div ref={containerRef} style={{ height: "500px", border: "1px solid gray", marginTop: "15px" }}></div>
-
-      {/* Download Buttons */}
-      <div style={{ marginTop: "15px" }}>
-        <button onClick={downloadImage}>Download as Image</button>
-        <button onClick={downloadPDF} style={{ marginLeft: "10px" }}>Download as PDF</button>
+      {/* Right Panel */}
+      <div style={{ flex: 1 }}>
+        <div ref={containerRef} style={{ height: "600px", border: "1px solid gray" }}></div>
       </div>
     </div>
   );
