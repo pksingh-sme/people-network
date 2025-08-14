@@ -6,17 +6,29 @@ import "vis-network/styles/vis-network.css";
 
 export default function FamilyFriendsNetwork() {
   const [people, setPeople] = useState([
-    { id: 1, name: "Pramod", group: "family" },
-    { id: 2, name: "Harendra", group: "friend" },
+    { id: 1, name: "Pramod", group: "family", age: 32, dob: "1991-01-01", phone: "1234567890", email: "pramod@example.com", profession: "Engineer", organization: "Twise" },
+    { id: 2, name: "Harendra", group: "friend", age: 30, dob: "1993-02-15", phone: "9876543210", email: "harendra@example.com", profession: "Designer", organization: "Freelance" },
   ]);
+
   const [relations, setRelations] = useState([{ from: 1, to: 2, label: "Friend" }]);
+  
+  // Member form states
   const [newName, setNewName] = useState("");
   const [newGroup, setNewGroup] = useState("family");
+  const [newAge, setNewAge] = useState("");
+  const [newDOB, setNewDOB] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newProfession, setNewProfession] = useState("");
+  const [newOrganization, setNewOrganization] = useState("");
+  const [editingMemberId, setEditingMemberId] = useState(null);
+
   const [relFrom, setRelFrom] = useState("");
   const [relTo, setRelTo] = useState("");
   const [relLabel, setRelLabel] = useState("");
   const [hoverCanvas, setHoverCanvas] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
+  const [memberDetails, setMemberDetails] = useState(null);
 
   const networkRef = useRef(null);
   const containerRef = useRef(null);
@@ -67,7 +79,6 @@ export default function FamilyFriendsNetwork() {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Filter nodes and edges if a member is selected
     const filteredNodes = selectedMemberId
       ? people.filter(p => {
           return p.id === selectedMemberId || 
@@ -95,32 +106,61 @@ export default function FamilyFriendsNetwork() {
       physics: { enabled: true },
     });
 
+    network.on("click", function (params) {
+      if (params.nodes.length) {
+        const nodeId = params.nodes[0];
+        const member = people.find(p => p.id === nodeId);
+        setMemberDetails(member);
+      } else {
+        setMemberDetails(null);
+      }
+    });
+
     networkRef.current = network;
   }, [people, relations, selectedMemberId]);
 
-  const addMember = () => {
+  const addOrUpdateMember = () => {
     if (!newName.trim()) return;
-    const id = people.length ? Math.max(...people.map((p) => p.id)) + 1 : 1;
-    setPeople([...people, { id, name: newName, group: newGroup }]);
-    setNewName("");
+
+    if (editingMemberId) {
+      // Update existing member
+      setPeople(people.map(p => p.id === editingMemberId ? {
+        ...p,
+        name: newName,
+        group: newGroup,
+        age: newAge,
+        dob: newDOB,
+        phone: newPhone,
+        email: newEmail,
+        profession: newProfession,
+        organization: newOrganization
+      } : p));
+      setEditingMemberId(null);
+    } else {
+      // Add new member
+      const id = people.length ? Math.max(...people.map((p) => p.id)) + 1 : 1;
+      setPeople([...people, { 
+        id, name: newName, group: newGroup, age: newAge, dob: newDOB, phone: newPhone, email: newEmail,
+        profession: newProfession, organization: newOrganization
+      }]);
+    }
+
+    // Reset form
+    setNewName(""); setNewGroup("family"); setNewAge(""); setNewDOB(""); setNewPhone(""); setNewEmail(""); setNewProfession(""); setNewOrganization("");
   };
 
   const deleteMember = (id) => {
     setPeople(people.filter((p) => p.id !== id));
     setRelations(relations.filter((r) => r.from !== id && r.to !== id));
     if (selectedMemberId === id) setSelectedMemberId(null);
-  };
-
-  const editMember = (id, name, group) => {
-    setPeople(people.map((p) => (p.id === id ? { ...p, name, group } : p)));
+    if (memberDetails?.id === id) setMemberDetails(null);
+    if (editingMemberId === id) setEditingMemberId(null);
   };
 
   const addRelationship = () => {
     if (!relFrom || !relTo || !relLabel) return;
     setRelations([...relations, { from: parseInt(relFrom), to: parseInt(relTo), label: relLabel }]);
-    setRelFrom("");
-    setRelTo("");
-    setRelLabel("");
+    setRelFrom(""); setRelTo(""); setRelLabel("");
   };
 
   const downloadImage = async () => {
@@ -139,13 +179,26 @@ export default function FamilyFriendsNetwork() {
     pdf.save("network.pdf");
   };
 
+  const startEditMember = (member) => {
+    setEditingMemberId(member.id);
+    setNewName(member.name);
+    setNewGroup(member.group);
+    setNewAge(member.age || "");
+    setNewDOB(member.dob || "");
+    setNewPhone(member.phone || "");
+    setNewEmail(member.email || "");
+    setNewProfession(member.profession || "");
+    setNewOrganization(member.organization || "");
+  };
+
   return (
     <div className="app-container" style={{ display: "flex", height: "100vh" }}>
       {/* LEFT PANEL */}
       <div style={{ width: "300px", padding: "10px", background: "#f4f4f4", borderRight: "1px solid #ccc", overflowY: "auto" }}>
-        {/* Add Member */}
+        
+        {/* Add/Edit Member */}
         <div style={cardStyle}>
-          <h4>👤 Add Member</h4>
+          <h4>👤 {editingMemberId ? "Edit Member" : "Add Member"}</h4>
           <input type="text" placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} style={inputStyle} />
           <select value={newGroup} onChange={(e) => setNewGroup(e.target.value)} style={inputStyle}>
             <option value="family">Family</option>
@@ -153,7 +206,13 @@ export default function FamilyFriendsNetwork() {
             <option value="colleague">Colleague</option>
             <option value="other">Other</option>
           </select>
-          <button onClick={addMember} style={{ ...buttonStyle, background: "#4CAF50", color: "#fff" }}>Add</button>
+          <input type="number" placeholder="Age" value={newAge} onChange={(e) => setNewAge(e.target.value)} style={inputStyle} />
+          <input type="date" placeholder="DOB" value={newDOB} onChange={(e) => setNewDOB(e.target.value)} style={inputStyle} />
+          <input type="text" placeholder="Phone" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} style={inputStyle} />
+          <input type="email" placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} style={inputStyle} />
+          <input type="text" placeholder="Profession" value={newProfession} onChange={(e) => setNewProfession(e.target.value)} style={inputStyle} />
+          <input type="text" placeholder="Organization" value={newOrganization} onChange={(e) => setNewOrganization(e.target.value)} style={inputStyle} />
+          <button onClick={addOrUpdateMember} style={{ ...buttonStyle, background: "#4CAF50", color: "#fff" }}>{editingMemberId ? "Update" : "Add"}</button>
         </div>
 
         {/* Add Relationship */}
@@ -171,7 +230,7 @@ export default function FamilyFriendsNetwork() {
           <button onClick={addRelationship} style={{ ...buttonStyle, background: "#2196F3", color: "#fff" }}>Add</button>
         </div>
 
-        {/* Members */}
+        {/* Members List */}
         <div style={cardStyle}>
           <h4>📋 Members</h4>
           {people.map((p) => (
@@ -181,13 +240,9 @@ export default function FamilyFriendsNetwork() {
                 <span>{p.name}</span>
               </div>
               <div style={{ display: "flex", gap: "6px" }}>
-                <button onClick={() => setSelectedMemberId(p.id)} style={{ ...buttonStyle, background: "#FF9800", color: "#fff", padding: "4px 8px" }}>Show</button>
-                <button onClick={() => {
-                  const name = prompt("Enter new name:", p.name);
-                  const group = prompt("Enter group:", p.group);
-                  if (name) editMember(p.id, name, group || p.group);
-                }} style={{ ...buttonStyle, background: "#4CAF50", color: "#fff", padding: "4px 8px" }}>Edit</button>
-                <button onClick={() => deleteMember(p.id)} style={{ ...buttonStyle, background: "#F44336", color: "#fff", padding: "4px 8px" }}>Delete</button>
+                <button onClick={() => startEditMember(p)} style={{ ...buttonStyle,  color: "#fff", padding: "4px 2px" }}>✏️</button>
+                <button onClick={() => setSelectedMemberId(p.id)} style={{ ...buttonStyle, color: "#fff", padding: "4px 2px" }}>🔗</button>
+                <button onClick={() => deleteMember(p.id)} style={{ ...buttonStyle,  color: "#fff", padding: "4px 2px" }}>🗑️</button>
               </div>
             </div>
           ))}
@@ -218,6 +273,30 @@ export default function FamilyFriendsNetwork() {
           }}>
             <button onClick={downloadImage} style={{ ...buttonStyle, background: "#2196F3", color: "#fff", marginBottom: "6px" }}>Download Image</button>
             <button onClick={downloadPDF} style={{ ...buttonStyle, background: "#FF5722", color: "#fff" }}>Download PDF</button>
+          </div>
+        )}
+
+        {/* Member Details Panel */}
+        {memberDetails && (
+          <div style={{
+            position: "absolute",
+            bottom: "10px",
+            left: "10px",
+            width: "280px",
+            background: "#fff",
+            padding: "12px",
+            borderRadius: "8px",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+            zIndex: 10,
+          }}>
+            <h4>{memberDetails.name}</h4>
+            <p><strong>Group:</strong> {memberDetails.group}</p>
+            <p><strong>Age:</strong> {memberDetails.age}</p>
+            <p><strong>DOB:</strong> {memberDetails.dob}</p>
+            <p><strong>Phone:</strong> {memberDetails.phone}</p>
+            <p><strong>Email:</strong> {memberDetails.email}</p>
+            <p><strong>Profession:</strong> {memberDetails.profession}</p>
+            <p><strong>Organization:</strong> {memberDetails.organization}</p>
           </div>
         )}
       </div>
