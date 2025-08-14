@@ -164,6 +164,8 @@ export default function FamilyFriendsNetwork() {
   };
 
   const downloadImage = async () => {
+    setHoverCanvas(false);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
     const canvas = await html2canvas(containerRef.current);
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/png");
@@ -212,7 +214,7 @@ export default function FamilyFriendsNetwork() {
           <input type="email" placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} style={inputStyle} />
           <input type="text" placeholder="Profession" value={newProfession} onChange={(e) => setNewProfession(e.target.value)} style={inputStyle} />
           <input type="text" placeholder="Organization" value={newOrganization} onChange={(e) => setNewOrganization(e.target.value)} style={inputStyle} />
-          <button onClick={addOrUpdateMember} style={{ ...buttonStyle, background: "#4CAF50", color: "#fff" }}>{editingMemberId ? "Update" : "Add"}</button>
+          <button type="button" onClick={addOrUpdateMember} style={{ ...buttonStyle, background: "#4CAF50", color: "#fff" }}>{editingMemberId ? "Update" : "Add"}</button>
         </div>
 
         {/* Add Relationship */}
